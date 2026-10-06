@@ -1,0 +1,7 @@
+partd:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('PARTD_DB', '../data/partd.duckdb') }}"
+      threads: 4

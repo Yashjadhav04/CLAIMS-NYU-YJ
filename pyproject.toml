@@ -1,0 +1,10 @@
+[project]
+name = "partd-actuarial-analytics"
+version = "1.0.0"
+description = "Synthetic Medicare Part D claims analytics: PDE final action, PMPM, IBNR, trend decomposition, forecast, dashboard"
+requires-python = ">=3.11"
+dependencies = ["numpy", "pandas", "pyarrow", "duckdb", "plotly"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

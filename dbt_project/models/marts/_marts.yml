@@ -1,0 +1,92 @@
+version: 2
+
+models:
+  - name: fct_pde_claims
+    description: >
+      One row per final-action pharmacy claim. Benefit phase is re-derived from cumulative gross cost and TrOOP.
+      Net plan liability = covered plan paid minus estimated CMS reinsurance on catastrophic gross drug cost.
+    columns:
+      - name: claim_group_id
+        data_tests: [unique, not_null]
+      - name: member_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_members')
+                field: member_id
+      - name: drug_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_drugs')
+                field: drug_id
+      - name: pharmacy_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pharmacies')
+                field: pharmacy_id
+      - name: benefit_phase_at_start
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['DEDUCTIBLE', 'INITIAL_COVERAGE', 'COVERAGE_GAP', 'CATASTROPHIC']
+      - name: gross_drug_cost
+        data_tests:
+          - not_null
+      - name: plan_type
+        description: Null would mean the member was not enrolled in the month of the fill (tested separately).
+        data_tests: [not_null]
+
+  - name: mart_pmpm_monthly
+    description: Core actuarial measures by incurred month x plan type x LIS status, as reported.
+    columns:
+      - name: member_months
+        data_tests:
+          - not_null
+      - name: gross_pmpm
+        data_tests:
+          - not_null
+
+  - name: mart_completion_curve
+    columns:
+      - name: dev_day
+        data_tests: [unique, not_null]
+      - name: completion_factor
+        data_tests:
+          - not_null
+
+  - name: mart_pmpm_completed
+    columns:
+      - name: completion_factor
+        data_tests: [not_null]
+
+  - name: mart_budget_variance
+    columns:
+      - name: incurred_month
+        data_tests: [unique, not_null]
+      - name: budget_net_plan_pmpm
+        data_tests: [not_null]
+
+  - name: mart_trend_drivers
+    columns:
+      - name: measure
+        data_tests:
+          - unique
+          - accepted_values:
+              arguments:
+                values: ['gross_drug_cost', 'net_plan_liability']
+
+  - name: mart_pde_edit_monthly
+    columns:
+      - name: edit_code
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['705', '715', '738', '999']
+
+  - name: mart_top_drugs_ytd
+    columns:
+      - name: drug_id
+        data_tests: [unique, not_null]

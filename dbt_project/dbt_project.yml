@@ -1,0 +1,44 @@
+name: partd
+version: "1.0.0"
+config-version: 2
+profile: partd
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+vars:
+  # Extract "as of" date: drives incurred-but-not-received (completion) logic.
+  as_of_date: "{{ env_var('PARTD_AS_OF', '2026-10-06') }}"
+  # Last fully developed month used for the year-over-year trend decomposition (YTD vs prior-year YTD).
+  trend_end_month: "{{ env_var('PARTD_TREND_END', '2026-07-01') }}"
+  # Days of claim development used to build the completion curve.
+  completion_max_dev_days: 150
+
+seeds:
+  partd:
+    benefit_params:
+      +column_types:
+        benefit_year: integer
+        design: varchar
+        deductible: double
+        icl_limit: double
+        troop_threshold: double
+    tier_cost_share:
+      +column_types:
+        tier: integer
+        cost_share_rate: double
+    budget_net_plan_pmpm:
+      +column_types:
+        month_start: date
+        budget_net_plan_pmpm: double
+
+models:
+  partd:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table

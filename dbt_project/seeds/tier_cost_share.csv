@@ -1,0 +1,6 @@
+tier,tier_name,cost_share_rate
+1,Preferred generic,0.05
+2,Generic,0.12
+3,Preferred brand,0.20
+4,Non-preferred drug,0.33
+5,Specialty,0.25

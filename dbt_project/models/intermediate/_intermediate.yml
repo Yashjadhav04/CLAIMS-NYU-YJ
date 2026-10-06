@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: int_pde_final_action
+    description: Latest accepted PDE record per claim, excluding deleted claims ("final action").
+    columns:
+      - name: claim_group_id
+        data_tests: [unique, not_null]
+
+  - name: int_pde_rejects
+    columns:
+      - name: claim_group_id
+        data_tests: [unique, not_null]
+
+  - name: int_member_months
+    columns:
+      - name: member_id
+        data_tests: [not_null]

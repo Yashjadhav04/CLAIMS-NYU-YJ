@@ -1,0 +1,52 @@
+// Part D cost trend model - DAX measures.
+// Tables: fact_pmpm_monthly, fact_budget_variance, fact_trend_drivers, fact_catastrophic_penetration,
+//         fact_pde_edits, dim_date, dim_drug, dim_plan. Relationships in model.md.
+// These measures are written against the export schema but have NOT been run in Power BI Desktop
+// (a .pbix cannot be produced from this environment). Expect to adjust names on first load.
+
+// ---- Core --------------------------------------------------------------------------------------
+Member Months = SUM ( fact_pmpm_monthly[member_months] )
+Gross Drug Cost = SUM ( fact_pmpm_monthly[gross_drug_cost] )
+Net Plan Liability = SUM ( fact_pmpm_monthly[net_plan_liability] )
+Net Plan PMPM = DIVIDE ( [Net Plan Liability], [Member Months] )
+Gross PMPM = DIVIDE ( [Gross Drug Cost], [Member Months] )
+Member Cost Share = SUM ( fact_pmpm_monthly[patient_pay] )
+Claims = SUM ( fact_pmpm_monthly[claims] )
+Cost Per Claim = DIVIDE ( [Gross Drug Cost], [Claims] )
+
+// ---- Time intelligence -------------------------------------------------------------------------
+Net Plan PMPM PY =
+CALCULATE ( [Net Plan PMPM], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+
+Net Plan PMPM YoY % =
+DIVIDE ( [Net Plan PMPM] - [Net Plan PMPM PY], [Net Plan PMPM PY] )
+
+Net Plan Liability YTD = TOTALYTD ( [Net Plan Liability], dim_date[date] )
+
+// ---- Budget ------------------------------------------------------------------------------------
+Budget Net Plan Dollars = SUMX ( fact_budget_variance, fact_budget_variance[budget_net_plan_pmpm] * fact_budget_variance[member_months] )
+Variance to Budget $ = [Net Plan Liability] - [Budget Net Plan Dollars]
+Variance to Budget % = DIVIDE ( [Variance to Budget $], [Budget Net Plan Dollars] )
+Variance Flag =
+SWITCH ( TRUE (),
+    [Variance to Budget %] > 0.05, "Over budget >5%",
+    [Variance to Budget %] > 0.02, "Watch",
+    "On track" )
+
+// ---- Trend drivers (use fact_trend_drivers, one row per measure) -------------------------------
+Utilization Effect = SUM ( fact_trend_drivers[utilization_effect] )
+Mix Effect = SUM ( fact_trend_drivers[mix_effect_existing] ) + SUM ( fact_trend_drivers[mix_effect_new_drugs] )
+Price Effect = SUM ( fact_trend_drivers[price_effect] )
+Trend Check = SUM ( fact_trend_drivers[pmpm_change] ) - ( [Utilization Effect] + [Mix Effect] + [Price Effect] )  // should be ~0
+
+// ---- Benefit and data quality ------------------------------------------------------------------
+Catastrophic Penetration % =
+CALCULATE (
+    MAX ( fact_catastrophic_penetration[pct_enrolled_in_catastrophic] ),
+    LASTDATE ( dim_date[date] )
+)
+
+PDE Reject Rate =
+DIVIDE ( SUM ( fact_pde_edits[rejects] ), SUM ( fact_pde_edits[submissions_in_month] ) )
+
+Unresolved Reject Dollars = SUM ( fact_pde_edits[gross_at_risk_unresolved] )

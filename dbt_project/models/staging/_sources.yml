@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Synthetic raw extracts loaded into DuckDB by `python -m partd.load_raw`. Shapes mirror what a Part D
+      sponsor would receive: PDE submission records (originals, adjustments, deletions, rejects), enrollment,
+      and reference data.
+    schema: raw
+    tables:
+      - name: members
+      - name: plans
+      - name: enrollment_monthly
+      - name: pharmacies
+      - name: drugs
+      - name: pde_submissions
+        description: One row per PDE submission record, including rejected submissions, adjustments and deletions.

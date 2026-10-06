@@ -1,0 +1,73 @@
+version: 2
+
+models:
+  - name: stg_members
+    columns:
+      - name: member_id
+        data_tests: [unique, not_null]
+
+  - name: stg_plans
+    columns:
+      - name: plan_id
+        data_tests: [unique, not_null]
+      - name: plan_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['PDP', 'MAPD']
+
+  - name: stg_enrollment
+    columns:
+      - name: member_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_members')
+                field: member_id
+      - name: plan_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_plans')
+                field: plan_id
+
+  - name: stg_drugs
+    columns:
+      - name: drug_id
+        data_tests: [unique, not_null]
+      - name: tier
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+
+  - name: stg_pharmacies
+    columns:
+      - name: pharmacy_id
+        data_tests: [unique, not_null]
+
+  - name: stg_pde_submissions
+    description: One row per PDE submission record (originals, adjustments, deletions, rejects).
+    columns:
+      - name: pde_id
+        data_tests: [unique, not_null]
+      - name: claim_group_id
+        data_tests: [not_null]
+      - name: dcs_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['A', 'R']
+      - name: adjustment_deletion_code
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['', 'A', 'D']
+      - name: edit_code
+        description: Populated only on rejected submissions.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['705', '715', '738', '999']
