@@ -20,3 +20,10 @@
 
 ## Tests
 - Benefit-phase re-derivation requires complete claim history. Tests use `claims_with_complete_history()`, which drops recent fills (within 95 days of extract) and member-years with unresolved rejects. That scoping is deliberate and documented, not a loophole.
+
+## Public CMS data
+- Source: data.cms.gov, Medicare Part D Spending by Drug (annual, 2020-2024) and Medicare Quarterly Part D Spending by Drug (2025 preliminary).
+- Gross drug cost (Medicare + plan + beneficiary), before rebates. Aggregate for all of Part D, not one plan.
+- No member months, so no PMPM. Volume in the trend breakdown is CMS dose units; for injectables these can change with strength and packaging.
+- The 2023-to-2024 price effect is negative (-$29B). Insulin explains about $8B; the rest is spread over ~2,700 drugs and is not attributed.
+- 2025 (quarterly file) and Q1 2026 are not used for growth rates: CMS says the quarterly file is preliminary and not directly comparable.

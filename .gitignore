@@ -11,3 +11,4 @@ dbt_project/logs/
 dbt_project/dbt_packages/
 powerbi/export/
 .DS_Store
+data/public/

@@ -11,3 +11,4 @@
 | Power BI | `powerbi/` DAX, theme, relationships and page guide (no .pbix) |
 | Communication and storytelling | Auto-written insights on the dashboard; `INTERVIEW_GUIDE.md` |
 | Streamline processes | One command rebuild (`make all`), CI, dbt tests replacing manual reconciliation |
+| Work with real public data | `src/partd/public_cms.py`: CMS Part D spending 2020-2024, trend breakdown, tests |
