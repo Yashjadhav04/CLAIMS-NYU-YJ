@@ -24,6 +24,9 @@
 ## Public CMS data
 - Source: data.cms.gov, Medicare Part D Spending by Drug (annual, 2020-2024) and Medicare Quarterly Part D Spending by Drug (2025 preliminary).
 - Gross drug cost (Medicare + plan + beneficiary), before rebates. Aggregate for all of Part D, not one plan.
-- No member months, so no PMPM. Volume in the trend breakdown is CMS dose units; for injectables these can change with strength and packaging.
+- Per-member figures divide the spending file by member months from CMS Monthly Enrollment (Part D enrollees summed over 12 months). Volume in the trend breakdown is CMS dose units; for injectables these can change with strength and packaging.
 - The 2023-to-2024 price effect is negative (-$29B). Insulin explains about $8B; the rest is spread over ~2,700 drugs and is not attributed.
 - 2025 (quarterly file) and Q1 2026 are not used for growth rates: CMS says the quarterly file is preliminary and not directly comparable.
+- State comparison: cost by prescriber location over enrollees by residence; DC inflated; territories excluded.
+- 2026 negotiated prices come from CMS's fact sheet; the exposure figure applies the announced cut to 2024 spend at constant volume, vs list price and before rebates. It is a ceiling for a gross view, not a forecast.
+- Excel Net_Sensitivity uses an assumed rebate rate (yellow cell); CMS publishes no rebates.

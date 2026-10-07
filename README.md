@@ -4,7 +4,8 @@ A production-style analytics project for a Medicare Part D actuarial analytics t
 
 **Two dashboards, kept separate on purpose.**
 - `reports/partd_dashboard.html`: **synthetic** plan-level claims (PDE, PMPM, IBNR, budget, forecast). Generated here. Nothing comes from UnitedHealth Group or any real plan, and the benefit parameters are illustrative (verify against the CMS Rate Announcement before any real use).
-- `reports/partd_public_cms_dashboard.html`: **real public data**, CMS Medicare Part D Spending by Drug, 2020 to 2024 (all of Part D, drug level, gross cost before rebates). Run `make public` to download and build it.
+- `reports/partd_public_cms_dashboard.html`: **real public data** from data.cms.gov: spending by drug 2020 to 2024, monthly enrollment (real member months, so real PMPM), state-level cost, and the 2026 Medicare negotiated prices. All of Part D, gross cost before rebates. Run `make public` to download and build it.
+- `reports/partd_analyst_pack.xlsx`: the same analysis as an Excel workbook with live formulas (`make excel`). `docs/BRIEFING.md`: the one-page memo (`make briefing`).
 
 ![synthetic dashboard](docs/dashboard.png)
 ![public CMS dashboard](docs/public_dashboard.png)
@@ -28,10 +29,11 @@ On the bundled synthetic book (6,000 members, 498K claims, Jan 2024 to Sep 2026)
 | Warehouse | DuckDB + dbt: staging, PDE final action, benefit-phase re-derivation, 14 marts, 13 singular tests | `dbt_project/` |
 | Actuarial | Completion factors and IBNR, PMPM, budget variance, price/volume/mix with an exact-sum identity | marts `mart_pmpm_completed`, `mart_trend_drivers` |
 | Forecast | Rolling-origin backtest, method chosen by backtest, empirical interval, FY projection vs budget | `src/partd/forecast.py` |
-| Real public data | CMS Part D Spending by Drug: spend, claims, price/volume/mix, GLP-1 growth, concentration, manufacturers | `src/partd/public_cms.py` |
+| Real public data | CMS spending, enrollment, state and negotiated-price data: national PMPM, use vs price split, state comparison, 2026 negotiation exposure, cross-file checks | `src/partd/public_cms.py`, `public_extra.py` |
+| Analyst deliverables | Excel pack with live formulas, one-page briefing, quarterly runbook, data-quality log, public-data SQL and SAS | `reports/`, `docs/`, `sql/public/`, `sas/05_*` |
 | Reporting | Standalone HTML dashboard, Streamlit app, Power BI kit (DAX, theme, build guide) | `reports/`, `app/`, `powerbi/` |
 | SAS and SQL | SAS reference translations, ad-hoc SQL queries | `sas/`, `sql/` |
-| Quality | 86 dbt checks (mutation-tested) and 32 pytest tests | `dbt_project/tests`, `tests/` |
+| Quality | 86 dbt checks (mutation-tested) and 40 pytest tests | `dbt_project/tests`, `tests/` |
 
 ## Run it
 
@@ -59,7 +61,7 @@ make app                 # interactive Streamlit version
 - The backtest has 9 forecasts, so the model choice and interval are tentative. The chosen method under-forecast every time (bias +2.0%), so the FY projection is more likely light than heavy.
 - Benefit phase re-derivation is valid only when a member's claim history is complete, so tests are scoped accordingly.
 - 2027 is not modeled.
-- The public CMS data has no member months and no rebates, so it supports trend and mix analysis but not PMPM or net cost. 2025 comes from CMS's preliminary quarterly file and is not compared with the annual series; injectable dose-unit prices (insulin, GLP-1s) are only partly reliable.
+- The public CMS data has no rebates, so everything on it is gross cost; net cost to a plan is not knowable from it. Per-member figures use CMS's separate enrollment file as the denominator. 2025 comes from CMS's preliminary quarterly file and is not compared with the annual series; injectable dose-unit prices (insulin, GLP-1s) are only partly reliable.
 - SAS programs are reference translations and were **not run**. A `.pbix` is not included (cannot be built here); `powerbi/model.md` is the build guide and the DAX is untested in Desktop.
 
 See `docs/` for architecture, metric definitions, assumptions, and an interview guide.

@@ -11,4 +11,6 @@
 | Power BI | `powerbi/` DAX, theme, relationships and page guide (no .pbix) |
 | Communication and storytelling | Auto-written insights on the dashboard; `INTERVIEW_GUIDE.md` |
 | Streamline processes | One command rebuild (`make all`), CI, dbt tests replacing manual reconciliation |
-| Work with real public data | `src/partd/public_cms.py`: CMS Part D spending 2020-2024, trend breakdown, tests |
+| Work with real public data | `public_cms.py`, `public_extra.py`: spending, enrollment, state and negotiated-price data, reconciliation checks, tests |
+| Excel | `reports/partd_analyst_pack.xlsx`: 7 sheets, about 1,300 live formulas, inputs in blue, assumption cells in yellow |
+| Streamline processes | `docs/RUNBOOK.md`, `make public/excel/briefing`, automated cross-file checks |

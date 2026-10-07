@@ -19,6 +19,7 @@ from plotly.offline import get_plotlyjs
 
 from . import config
 from .charts import AQUA, AXIS, BLUE, GRID, INK2, MAGENTA, MUTED, ORANGE, SURFACE, YELLOW, _base
+from . import public_extra as X
 from .report import CSS, JS
 
 PUBLIC_DIR = config.DATA_DIR / "public"
@@ -31,20 +32,21 @@ GLP1 = ["semaglutide", "tirzepatide", "dulaglutide", "liraglutide", "exenatide",
 
 # ----------------------------------------------------------------------------------------------- fetch
 def _csv_url(title_prefix: str) -> str:
-    """Resolve the current CSV link from CMS's catalogue (file names change with every release)."""
+    """Resolve the latest CSV link from CMS's catalogue (file names change with every release)."""
     with urllib.request.urlopen(CATALOG, timeout=120) as r:
         cat = json.load(r)
-    for ds in cat["dataset"]:
-        if ds["title"].startswith(title_prefix):
-            for dist in ds.get("distribution", []):
-                if dist.get("format") == "CSV":
-                    return dist.get("downloadURL") or dist["accessURL"]
+    hits = [ds for ds in cat["dataset"] if ds["title"].startswith(title_prefix)]
+    for ds in sorted(hits, key=lambda d: d["title"], reverse=True):  # titles end in the data date, so newest first
+        for dist in ds.get("distribution", []):
+            if dist.get("format") == "CSV":
+                return dist.get("downloadURL") or dist["accessURL"]
     raise RuntimeError(f"no CSV found for {title_prefix!r}")
 
 
 def fetch(force: bool = False) -> None:
     PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
-    for path, prefix in ((ANNUAL, "Medicare Part D Spending by Drug"), (QUARTERLY, "Medicare Quarterly Part D Spending by Drug")):
+    for path, prefix in ((ANNUAL, "Medicare Part D Spending by Drug"), (QUARTERLY, "Medicare Quarterly Part D Spending by Drug"),
+                         (X.ENROLL, "Medicare Monthly Enrollment"), (X.GEO, "Medicare Part D Prescribers - by Geography and Drug")):
         if force or not path.exists():
             url = _csv_url(prefix)
             print("downloading", url)
@@ -126,6 +128,15 @@ def build_data() -> dict:
     d["totals"] = (long.groupby("year").agg(spend=("spend", "sum"), claims=("claims", "sum"), units=("units", "sum")).reset_index())
     d["pvm"] = pd.DataFrame([pvm(long, y, y + 1) for y in YEARS[:-1]])
     d["pvm_total"] = pvm(long, 2020, 2024)
+    e = X.load_enrollment()
+    d["enroll_monthly"] = X.national_monthly(e)
+    d["member_months"] = X.annual_member_months(d["enroll_monthly"])
+    d["natl"] = X.national_pmpm(d["totals"], d["member_months"])
+    d["bridge"] = pd.DataFrame([X.pmpm_bridge(d["natl"], y, y + 1) for y in YEARS[:-1]])
+    d["geo"] = X.load_geo()
+    d["states"] = X.state_pmpm(e, d["geo"])
+    d["negotiation"] = X.negotiation_table()
+    d["recon"] = X.reconciliation(d["totals"], d["geo"], e, overall)
     return d
 
 
@@ -137,7 +148,12 @@ def kpis(d: dict) -> tuple[dict, list[str]]:
     p = d["pvm_total"]
     g = d["long"][d["long"]["Gnrc_Name"].str.lower().str.contains("|".join(GLP1))].groupby("year")["spend"].sum()
     q25 = d["q25"]
+    nat = d["natl"].set_index("year")
+    neg = d["negotiation"]
     k = {
+        "pmpm_2024": nat.loc[2024, "gross_pmpm"], "pmpm_2020": nat.loc[2020, "gross_pmpm"], "avg_enrollees_2024": nat.loc[2024, "avg_enrollees"],
+        "neg_spend": neg["spend_2024"].sum(), "neg_share": neg["spend_2024"].sum() / t.loc[2024, "spend"],
+        "neg_implied": neg["implied_gross_reduction_2024_volume"].sum(),
         "spend_2024": t.loc[2024, "spend"], "spend_2020": t.loc[2020, "spend"], "cagr": cagr,
         "claims_2024": t.loc[2024, "claims"], "top10_share": top10, "top_drug": l24.iloc[0]["Brnd_Name"],
         "top_drug_spend": l24.iloc[0]["spend"], "glp1_2024": g[2024], "glp1_2020": g[2020],
@@ -161,6 +177,11 @@ def kpis(d: dict) -> tuple[dict, list[str]]:
         f"${lantus['Avg_Spnd_Per_Dsg_Unt_Wghtd_2023']:.2f} to ${lantus['Avg_Spnd_Per_Dsg_Unt_Wghtd_2024']:.2f}, in line with the insulin list-price cuts announced for 2024. "
         f"The rest is spread across the other drugs ({n_down:,} drugs had lower spend per unit, {n_up:,} higher); I have not attributed it further.",
         f"Volume (${last['volume']/1e9:,.0f}B) and a shift toward higher-cost drugs (${last['mix']/1e9:,.0f}B) drove the 2024 increase instead.",
+        f"Per member, gross cost went from ${k['pmpm_2020']:,.0f} to ${k['pmpm_2024']:,.0f} a month between 2020 and 2024 "
+        f"({nat.loc[2024, 'avg_enrollees']/1e6:,.1f}M average Part D enrollees in 2024, {nat.loc[2024, 'mapd_share']:.0%} in MA-PD plans). It was flat from 2023 to 2024.",
+        f"The ten drugs Medicare negotiated for 2026 were ${k['neg_spend']/1e9:,.0f}B, or {k['neg_share']:.0%}, of 2024 gross spend. "
+        f"Their spend per claim in Q1 2026 data is already {-neg['observed_change_per_claim'].max():.0%} to {-neg['observed_change_per_claim'].min():.0%} lower than 2025 for most of them, "
+        "close to the announced price cuts (NovoLog is the exception because its list price was cut in 2024). Q1 2026 is preliminary.",
         f"GLP-1 diabetes and weight-loss drugs went from ${k['glp1_2020']/1e9:,.1f}B to ${k['glp1_2024']/1e9:,.1f}B ({k['glp1_2024']/k['spend_2024']:.1%} of 2024 spending).",
         f"The ten largest drugs make up {top10:.0%} of 2024 spending; {k['top_drug']} alone is ${k['top_drug_spend']/1e9:,.1f}B.",
         "The 2025 figure comes from CMS's preliminary quarterly file, which CMS says is not directly comparable to the annual file, so it is shown as a single number and left out of growth rates.",
@@ -288,8 +309,93 @@ def fig_unit_price(d: dict, n: int = 40) -> go.Figure:
     return fig
 
 
+def fig_pmpm_national(d: dict) -> go.Figure:
+    t = d["natl"]
+    fig = go.Figure(go.Scatter(x=t["year"], y=t["gross_pmpm"], mode="lines+markers+text", line=dict(color=BLUE, width=2),
+                               marker=dict(size=8, line=dict(width=2, color=SURFACE)), text=[f"${v:,.0f}" for v in t["gross_pmpm"]],
+                               textposition="top center", textfont=dict(color=INK2), hovertemplate="$%{y:,.0f}"))
+    _base(fig, "Gross drug cost per Part D member per month (real enrollment as denominator)", height=340, yfmt="$,.0f")
+    fig.update_layout(showlegend=False)
+    fig.update_xaxes(tickmode="array", tickvals=YEARS)
+    fig.update_yaxes(range=[t["gross_pmpm"].min() * 0.85, t["gross_pmpm"].max() * 1.08])
+    return fig
+
+
+def fig_pmpm_bridge(d: dict) -> go.Figure:
+    b = d["bridge"]
+    labels = [f"{a} to {c}" for a, c in zip(b["from"], b["to"])]
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=labels, y=b["cost_per_claim"], name="Cost per claim", marker=dict(color=ORANGE, line=dict(width=2, color=SURFACE)), hovertemplate="$%{y:+.1f}"))
+    fig.add_trace(go.Bar(x=labels, y=b["utilization"], name="Claims per member", marker=dict(color=BLUE, line=dict(width=2, color=SURFACE)), hovertemplate="$%{y:+.1f}"))
+    _base(fig, "Change in gross PMPM: claims per member vs cost per claim ($ per member per month)", height=360)
+    fig.update_layout(barmode="relative")
+    return fig
+
+
+def fig_enrollment_mix(d: dict) -> go.Figure:
+    n = d["enroll_monthly"]
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=n["date"], y=n["mapd"] / 1e6, name="MA-PD (Medicare Advantage)", mode="lines", stackgroup="one", line=dict(width=0.5, color=SURFACE), fillcolor=BLUE, hovertemplate="%{y:.1f}M"))
+    fig.add_trace(go.Scatter(x=n["date"], y=n["pdp"] / 1e6, name="Stand-alone PDP", mode="lines", stackgroup="one", line=dict(width=0.5, color=SURFACE), fillcolor=ORANGE, hovertemplate="%{y:.1f}M"))
+    _base(fig, "Part D enrollees by plan type (millions; monthly, to latest month)", height=340)
+    return fig
+
+
+def fig_state_ranked(d: dict, n: int = 10) -> go.Figure:
+    s = d["states"].sort_values("gross_pmpm")
+    t = pd.concat([s.head(n), s.tail(n)])
+    med = float(s["gross_pmpm"].median())
+    colors = [AQUA] * n + [BLUE] * n  # low states first (sorted ascending), then high
+    fig = go.Figure(go.Bar(y=t["state"], x=t["gross_pmpm"], orientation="h", marker=dict(color=colors, line=dict(width=2, color=SURFACE)),
+                           text=[f"${v:,.0f}" for v in t["gross_pmpm"]], textposition="outside", textfont=dict(color=INK2),
+                           hovertemplate="%{y}: $%{x:,.0f}<extra></extra>"))
+    fig.add_vline(x=med, line=dict(color=MUTED, width=1, dash="dot"), annotation_text=f"median ${med:,.0f}", annotation_position="bottom right", annotation_font=dict(color=INK2))
+    _base(fig, f"Gross drug cost per member per month, 2024: {n} highest (blue) and {n} lowest (green) states", height=560)
+    fig.update_layout(hovermode="closest", showlegend=False, margin=dict(l=60, r=70, t=56, b=40))
+    fig.update_xaxes(gridcolor=GRID, showgrid=True, tickformat="$,.0f")
+    fig.update_yaxes(gridcolor="rgba(0,0,0,0)")
+    return fig
+
+
+def fig_state_scatter(d: dict) -> go.Figure:
+    s = d["states"]
+    fig = go.Figure(go.Scatter(x=s["fills_per_member_month"], y=s["cost_per_fill"], mode="markers+text", text=s["state"], textposition="top center",
+                               textfont=dict(size=9, color=MUTED), marker=dict(size=9, color=BLUE, line=dict(width=2, color=SURFACE)),
+                               hovertemplate="%{text}: %{x:.2f} fills, $%{y:,.0f} per fill<extra></extra>"))
+    _base(fig, "States differ on two things: fills per member (use) and cost per 30-day fill (price and drug mix)", height=480, yfmt="$,.0f")
+    fig.update_layout(hovermode="closest", showlegend=False)
+    fig.update_xaxes(title=dict(text="30-day fills per member per month", font=dict(size=12, color=MUTED)))
+    return fig
+
+
+def fig_negotiation(d: dict) -> go.Figure:
+    n = d["negotiation"].sort_values("spend_2024")
+    fig = go.Figure()
+    fig.add_trace(go.Bar(y=n["drug"], x=n["mfp_discount"] * 100, name="Announced price cut (MFP vs list)", orientation="h", marker=dict(color=BLUE, line=dict(width=2, color=SURFACE)), hovertemplate="%{x:.0f}%"))
+    fig.add_trace(go.Bar(y=n["drug"], x=-n["observed_change_per_claim"] * 100, name="Observed drop in spend per claim, Q1 2026 vs 2025", orientation="h", marker=dict(color=ORANGE, line=dict(width=2, color=SURFACE)), hovertemplate="%{x:.0f}%"))
+    _base(fig, "The 10 drugs with negotiated 2026 prices: announced cut vs what Q1 2026 data shows (%)", height=520)
+    fig.update_layout(barmode="group", hovermode="y unified", margin=dict(l=110, r=30, t=56, b=60))
+    fig.update_xaxes(gridcolor=GRID, showgrid=True)
+    fig.update_yaxes(gridcolor="rgba(0,0,0,0)")
+    return fig
+
+
+def fig_negotiation_exposure(d: dict) -> go.Figure:
+    n = d["negotiation"].sort_values("spend_2024")
+    fig = go.Figure(go.Bar(y=n["drug"], x=n["spend_2024"] / 1e9, orientation="h", marker=dict(color=BLUE, line=dict(width=2, color=SURFACE)),
+                           text=[f"${v/1e9:.1f}B" for v in n["spend_2024"]], textposition="outside", textfont=dict(color=INK2), hovertemplate="%{y}: $%{x:.2f}B<extra></extra>"))
+    _base(fig, "2024 gross spend on the 10 negotiated drugs ($ billions)", height=420)
+    fig.update_layout(hovermode="closest", showlegend=False, margin=dict(l=110, r=60, t=56, b=40))
+    fig.update_xaxes(gridcolor=GRID, showgrid=True)
+    fig.update_yaxes(gridcolor="rgba(0,0,0,0)")
+    return fig
+
+
 FIGS = {
     "overview": [("spend_claims", fig_spend_claims), ("concentration", fig_concentration)],
+    "permember": [("pmpm_national", fig_pmpm_national), ("pmpm_bridge", fig_pmpm_bridge), ("enrollment_mix", fig_enrollment_mix)],
+    "geography": [("state_ranked", fig_state_ranked), ("state_scatter", fig_state_scatter)],
+    "negotiation": [("neg_exposure", fig_negotiation_exposure), ("negotiation", fig_negotiation)],
     "drivers": [("pvm_years", fig_pvm_years), ("unit_price", fig_unit_price)],
     "drugs": [("top_drugs", fig_top_drugs), ("movers", fig_movers), ("glp1", fig_glp1)],
     "market": [("manufacturers", fig_manufacturers)],
@@ -301,7 +407,9 @@ ABOUT = """
 <h3>What the numbers are</h3>
 <ul>
 <li><b>Gross drug cost</b>: Medicare, plan and beneficiary payments for the claim. CMS does not publish rebates or other price concessions, so this is not net cost to a plan.</li>
-<li><b>No member months in public data</b>, so there is no PMPM here. Metrics are dollars, claims and dose units.</li>
+<li><b>Per-member figures</b> divide the spending file by member months from CMS Monthly Enrollment (Part D enrollees summed over the 12 months). Spending and enrollment are separate CMS releases; they reconcile in the checks tab.</li>
+<li><b>State view</b> uses the prescriber-by-geography file (cost by where the prescriber practices) over enrollees by state of residence. They differ a little, so treat state gaps as indicative.</li>
+<li><b>Negotiated prices</b> are typed in from CMS's fact sheet (link below). Observed change is spend per claim in the preliminary Q1 2026 file against the 2025 file, so it is a check on direction and size, not a measurement of savings.</li>
 <li><b>Trend breakdown</b> uses the same price/volume/mix algebra as the synthetic pipeline, with dose units as volume. Dose units mix tablets, millilitres and pens, so "mix" also absorbs unit differences; read it as a shift between drugs.</li>
 <li>Drug rows are CMS's "Overall" rows (all manufacturers). The manufacturer view uses the per-manufacturer rows.</li>
 </ul>
@@ -311,6 +419,7 @@ ABOUT = """
 <li>Drugs are matched by brand and generic name; a drug that CMS renamed between years appears as an exit and an entry.</li>
 <li>The 2024 and 2025 files are separate releases; their gap is not treated as a finding.</li>
 </ul>
+<p>Negotiated prices: <a href="https://cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf">CMS fact sheet</a>. Also: <a href="https://data.cms.gov/summary-statistics-on-use-and-payments/medicare-medicaid-enrollment/medicare-monthly-enrollment">Medicare Monthly Enrollment</a>, <a href="https://data.cms.gov/provider-summary-by-type-of-service/medicare-part-d-prescribers/medicare-part-d-prescribers-by-geography-and-drug">Part D Prescribers by Geography and Drug</a>.</p>
 <p>Source: <a href="https://data.cms.gov/summary-statistics-on-use-and-payments/medicare-medicaid-spending-by-drug/medicare-part-d-spending-by-drug">Medicare Part D Spending by Drug</a>, <a href="https://data.cms.gov/summary-statistics-on-use-and-payments/medicare-medicaid-spending-by-drug/medicare-quarterly-part-d-spending-by-drug">Medicare Quarterly Part D Spending by Drug</a>.</p>
 </div>
 """
@@ -327,6 +436,41 @@ def _table(fig: go.Figure) -> str:
     return "<details><summary>View data</summary>" + pd.concat(frames).head(80).to_html(index=False, border=0, float_format=lambda v: f"{v:,.3f}") + "</details>"
 
 
+GEO_NOTE = ("<div class='warn' style='margin:0 0 12px'>Read with care: cost is attributed to where the <b>prescriber</b> practices, enrollment to where the member lives. "
+            "Washington DC at about $840 is almost certainly inflated by prescribers there treating members who live in Maryland and Virginia. "
+            "Territories are excluded for the same reason. Differences between states mix use, price, drug mix, plan type and income-subsidy share; this view does not separate them.</div>")
+
+NEG_NOTE = ("<div class='warn' style='margin:0 0 12px'>The announced cut compares the negotiated price (MFP) with the list price CMS published. The data shows spend per claim, which also moves with strength and pack mix, "
+            "and Q1 2026 is preliminary. NovoLog's list price was cut about 75% in 2024, so little of the announced 76% is left to show between 2025 and 2026. "
+            "Entresto and Januvia differ from the announced cut in ways I have not explained. This checks direction and size; it is not a savings measurement.</div>")
+
+
+def neg_table_html(d: dict) -> str:
+    n = d["negotiation"].sort_values("spend_2024", ascending=False)
+    rows = "".join(
+        f"<tr><td style='text-align:left'>{html.escape(r.drug)}</td><td>${r.list_price_30d:,.0f}</td><td>${r.mfp_30d:,.0f}</td><td>{r.mfp_discount:.0%}</td>"
+        f"<td>${r.spend_2024/1e9:,.2f}B</td><td>${r.implied_gross_reduction_2024_volume/1e9:,.2f}B</td><td>{r.observed_change_per_claim:+.0%}</td></tr>"
+        for r in n.itertuples())
+    tot = n["spend_2024"].sum(); red = n["implied_gross_reduction_2024_volume"].sum()
+    mm = d["natl"].set_index("year").loc[2024, "member_months"]
+    return ("<div class='card' style='padding:16px'><h3 style='margin-top:0'>Exposure arithmetic (illustrative)</h3>"
+            "<table style='display:table'><tr><th style='text-align:left'>Drug</th><th>List, 30 days</th><th>Negotiated, 30 days</th><th>Cut</th><th>2024 gross spend</th><th>Cut applied to 2024 spend</th><th>Spend per claim, Q1 2026 vs 2025</th></tr>"
+            + rows + f"<tr><td style='text-align:left'><b>Total</b></td><td></td><td></td><td></td><td><b>${tot/1e9:,.1f}B</b></td><td><b>${red/1e9:,.1f}B</b></td><td></td></tr></table>"
+            f"<p style='color:#52514e'>At constant 2024 volume and ignoring rebates, the cuts would take about ${red/1e9:,.0f}B ({red/tot:.0%} of these drugs' spend, "
+            f"{red/d['totals'].set_index('year').loc[2024,'spend']:.0%} of all 2024 gross Part D spend), or about ${red/mm:,.0f} per member per month. "
+            "It is a ceiling for a gross view: plans and manufacturers already paid rebates on these drugs, so the net effect for a plan is smaller. Not a forecast.</p></div>")
+
+
+def quality_html(d: dict) -> str:
+    rows = "".join(
+        f"<tr><td style='text-align:left'>{html.escape(c['check'])}</td><td>{c['a']:,.0f}</td><td>{c['b']:,.0f}</td><td>{c['diff_pct']:+.3%}</td><td>{'pass' if c['pass'] else 'FAIL'}</td></tr>"
+        for c in d["recon"])
+    return ("<div class='card' style='padding:16px'><h3 style='margin-top:0'>Cross-file checks (run on every build)</h3>"
+            "<table style='display:table'><tr><th style='text-align:left'>Check</th><th>A</th><th>B</th><th>Difference</th><th>Result</th></tr>" + rows + "</table>"
+            "<p style='color:#52514e'>Enrollment, spending and prescriber files come from different CMS releases. A difference under the tolerance means they describe the same program; "
+            "a larger one would be investigated before any number is published. Territories are left out of the state comparison because prescriber location and beneficiary residence differ too much there.</p></div>")
+
+
 def build() -> str:
     d = build_data()
     k, ins = kpis(d)
@@ -336,19 +480,29 @@ def build() -> str:
         ("Largest drug", k["top_drug"], f"${k['top_drug_spend']/1e9:,.1f}B in 2024"),
         ("Top 10 drug share", f"{k['top10_share']:.0%}", "of 2024 spend"),
         ("GLP-1 spend 2024", f"${k['glp1_2024']/1e9:,.1f}B", f"from ${k['glp1_2020']/1e9:,.1f}B in 2020"),
+        ("Gross PMPM 2024", f"${k['pmpm_2024']:,.0f}", f"from ${k['pmpm_2020']:,.0f} in 2020"),
+        ("Negotiated-2026 drugs", f"{k['neg_share']:.0%}", f"${k['neg_spend']/1e9:,.0f}B of 2024 spend"),
         ("2025 (preliminary)", f"${k['spend_2025_prelim']/1e9:,.0f}B", "quarterly file, not comparable"),
     ]
     tile_html = "".join(f'<div class="tile"><div class="l">{a}</div><div class="v">{html.escape(b)}</div><div class="s">{c}</div></div>' for a, b, c in tiles)
-    tabs = [("overview", "Overview"), ("drivers", "What drove spend"), ("drugs", "Drugs"), ("market", "Market structure")]
+    tabs = [("overview", "Overview"), ("permember", "Per member"), ("drivers", "What drove spend"), ("drugs", "Drugs"),
+            ("geography", "Geography"), ("negotiation", "2026 negotiation"), ("market", "Market structure")]
     panels = []
     for tid, _ in tabs:
         cards = []
+        if tid == "geography":
+            cards.append(GEO_NOTE)
+        if tid == "negotiation":
+            cards.append(NEG_NOTE)
         for _, fn in FIGS[tid]:
             fig = fn(d)
             cards.append(f'<div class="card">{fig.to_html(full_html=False, include_plotlyjs=False, config={"displaylogo": False})}{_table(fig)}</div>')
+        if tid == "negotiation":
+            cards.append(neg_table_html(d))
         panels.append(f'<section class="panel" id="{tid}">{"".join(cards)}</section>')
+    panels.append(f'<section class="panel" id="quality">{quality_html(d)}</section>')
     panels.append(f'<section class="panel" id="method">{ABOUT}</section>')
-    nav = "".join(f'<button data-t="{t}" aria-selected="false">{n}</button>' for t, n in tabs) + '<button data-t="method" aria-selected="false">About the data</button>'
+    nav = "".join(f'<button data-t="{t}" aria-selected="false">{n}</button>' for t, n in tabs) + '<button data-t="quality" aria-selected="false">Data checks</button><button data-t="method" aria-selected="false">About the data</button>'
     ins_html = "<ul>" + "".join(f"<li>{html.escape(i)}</li>" for i in ins) + "</ul>"
     return (
         "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"

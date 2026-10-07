@@ -33,3 +33,10 @@ Ask: how does the team reconcile PDE to payment today, and what breaks most?
 - Why DuckDB and dbt? Fast to run anywhere, and the SQL ports to SQL Server or Teradata.
 - Why not a bigger model? Twenty monthly points do not support it; baselines won or were close.
 - Can I use SAS? Yes; the translations are written but unrun, and I would validate against the SQL oracle.
+
+## Real-data talking points (CMS public data)
+- National gross cost per member per month: $341 (2020) to $442 (2024), flat in 2024. Real enrollment is the denominator.
+- Why 2024 was flat: cost per claim fell (insulin list-price cuts explain about $8B of a $29B negative price effect; the rest is unexplained) while claims per member rose.
+- The ten negotiated drugs were 21% of 2024 spend ($61B). Q1 2026 spend per claim is already 40 to 70% lower for most of them. Be ready to say NovoLog is the exception (its list price was cut in 2024) and that this checks direction, not savings.
+- You can say what you could not do: net cost needs rebates, which are not public; plan-level cost needs plan data.
+- If asked how you check your work: cross-file reconciliation (0.04% gap between two CMS files), exact-sum identities, and a workbook where every derived number is a formula.

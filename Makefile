@@ -4,7 +4,7 @@ export PYTHONPATH := $(CURDIR)/src
 export PARTD_DB ?= $(CURDIR)/data/partd.duckdb
 DBT := dbt
 
-.PHONY: all generate load dbt forecast report export public test app clean
+.PHONY: all generate load dbt forecast report export public excel briefing test app clean
 all: generate load dbt forecast report export test
 
 generate:        ## synthetic PDE claims, members, pharmacies, budget
@@ -21,6 +21,10 @@ export:          ## CSV and parquet for Power BI
 	python -m partd.export_bi
 public:          ## real CMS public data dashboard (downloads from data.cms.gov)
 	python -m partd.public_cms
+excel:           ## Excel analyst pack with live formulas (recalculate in Excel/LibreOffice)
+	python -m partd.excel_pack
+briefing:        ## regenerate docs/BRIEFING.md from the real-data numbers
+	python -m partd.briefing
 test:
 	python -m pytest -q
 app:
