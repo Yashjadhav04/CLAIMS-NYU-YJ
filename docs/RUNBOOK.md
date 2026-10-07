@@ -1,13 +1,13 @@
 # Runbook: refreshing the analysis
 
-Written the way a team would hand the process to a new analyst. Each step says what to run, what to look at, and when to stop.
+This runbook documents the refresh process. Each step states what to run, what to review, and when to escalate.
 
 ## Quarterly refresh of the real-data views (about 15 minutes)
 1. `make public` downloads the newest CMS files (annual spending, quarterly spending, monthly enrollment, prescriber-by-geography) and rebuilds `reports/partd_public_cms_dashboard.html`.
-2. Open the **Data checks** tab. All rows must read `pass`. If one fails, stop: a file layout or definition probably changed. Do not publish.
-3. Skim the **Overview** insights. Anything that looks surprising (a sign flip, a drug jumping rank) gets traced to its source row before it goes into a memo.
+2. Open the **Data checks** tab. All rows must read `pass`. If one fails, stop: a file layout or definition has likely changed. Do not release the results until resolved.
+3. Review the **Overview** insights. Any unexpected movement (a sign change, a large change in drug rank) should be traced to its source row before inclusion in a memo.
 4. `make excel` rebuilds `reports/partd_analyst_pack.xlsx`. Open it in Excel or LibreOffice and recalculate; the Data_Checks sheet should match the dashboard.
-5. `make briefing` regenerates `docs/BRIEFING.md`. Read it against the dashboard and edit the "What I would tell leadership" section by hand before sending.
+5. `make briefing` regenerates `docs/BRIEFING.md`. Read it against the dashboard and review and edit the "Key findings" section before distribution.
 6. `make test` must pass.
 
 ## When CMS publishes a new annual year
@@ -15,12 +15,12 @@ Written the way a team would hand the process to a new analyst. Each step says w
 - Move 2025 out of "preliminary" only when it is in the annual file.
 
 ## Monthly refresh of the synthetic plan model
-`make all` rebuilds data, dbt models (86 checks), forecast, dashboard, export and tests. In production the only change is step 1: load real PDE extracts instead of the generator, then run the same models.
+`make all` rebuilds data, dbt models (86 checks), forecast, dashboard, export and tests. In production, the only change is step 1: load actual PDE extracts in place of the generator, then run the same models.
 
 ## Escalation rules
-- Any check outside tolerance: stop and report.
-- Any figure that moves more than 10% from the last release without an explanation: trace it before it is shared.
-- Anything that depends on rebates or plan-level detail: say it is not in the public data.
+- Any check outside tolerance: pause and escalate.
+- Any figure that moves more than 10% from the prior release without explanation: trace it before sharing.
+- Anything that depends on rebates or plan-level detail: note that it is not available in the public data.
 
-## What this replaces
-Manual copy-and-paste from CMS downloads into spreadsheets, and one-off reconciliation of files by eye. The checks and the formulas in the workbook do that now.
+## Purpose of the automation
+Replaces manual copying of CMS downloads into spreadsheets and ad hoc file reconciliation. The automated checks and workbook formulas now perform these steps.

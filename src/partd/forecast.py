@@ -9,12 +9,12 @@ Design choices (and why):
     A. seasonal-naive with trailing growth: same month last year x (1 + trailing 3-month year-over-year growth)
     B. seasonal index x linear trend: seasonal factors from the first post-redesign year, linear trend on the
        deseasonalized series
-  plus a no-seasonality "last value" baseline, so the backtest shows whether seasonality is earning its keep.
+  plus a no-seasonality "last value" baseline, so the backtest shows whether seasonality improves accuracy.
 * Recent months are completion-adjusted (IBNR). Months with a completion factor below COMPLETION_MIN are excluded from
   backtest scoring because their "actual" is itself an estimate.
 * The production method is whichever real model wins the backtest (it is not assumed in advance; with only a handful of
-  backtest points the choice is tentative and re-evaluated on every run).
-* Intervals are empirical: +/- the error that 80% of backtest forecasts stayed within (floor 2%). Small sample, stated plainly.
+  backtest points the choice is provisional and is re-evaluated on every run).
+* Intervals are empirical: +/- the error that 80% of backtest forecasts stayed within (floor 2%). Small sample.
 
 Run:  PYTHONPATH=src python -m partd.forecast
 """
@@ -143,7 +143,7 @@ def forecast_measure(monthly: pd.DataFrame, value_col: str, bt: Backtest) -> pd.
     months = pd.DatetimeIndex(m["month"])
     method = select_method(bt)
     errs = bt.detail[bt.detail["method"] == method]["rel_error"].abs().to_numpy()
-    # Interval half-width: the error that 80% of backtest forecasts stayed within (floor 2%). Small sample, stated plainly.
+    # Interval half-width: the error that 80% of backtest forecasts stayed within (floor 2%). Small sample.
     half = max(float(np.quantile(errs, 0.80)), 0.02)
     out = []
     for h in range(1, HORIZON + 1):

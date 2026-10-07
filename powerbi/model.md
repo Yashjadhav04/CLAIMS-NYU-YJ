@@ -1,6 +1,6 @@
 # Power BI model and build guide
 
-A `.pbix` file cannot be generated from this repo's environment, so this folder gives you everything needed to build it in about 30 minutes. Nothing here was opened in Power BI Desktop; treat names as a starting point.
+A `.pbix` file cannot be generated in this environment. This folder contains the DAX measures, theme and relationship specification needed to build the model (approximately 30 minutes). These files have not been validated in Power BI Desktop; field names may require adjustment.
 
 ## 1. Load
 1. Run `make export` (writes `powerbi/export/*.csv` and `*.parquet`).

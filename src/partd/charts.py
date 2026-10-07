@@ -111,18 +111,18 @@ def compute_kpis(d: dict[str, pd.DataFrame]) -> tuple[dict, list[str]]:
         "latest_completion_factor": latest_cf,
     }
     insights = [
-        f"Projected {cy} net plan liability is ${kpis['fy_projection']/1e6:.1f}M against a ${kpis['fy_budget']/1e6:.1f}M "
-        f"budget: {kpis['fy_variance_pct']:+.1%} (range {kpis['fy_variance_low']:+.1%} to {kpis['fy_variance_high']:+.1%}). "
-        f"Year to date the variance is {kpis['ytd_variance_pct']:+.1%}, about ${kpis['ytd_variance_dollars']/1e6:.2f}M.",
-        f"Gross drug cost PMPM is up {g['pmpm_change_pct']:.1%} year over year (YTD through "
+        f"Projected {cy} net plan liability is ${kpis['fy_projection']/1e6:.1f}M against a budget of ${kpis['fy_budget']/1e6:.1f}M, "
+        f"a variance of {kpis['fy_variance_pct']:+.1%} (scenario range {kpis['fy_variance_low']:+.1%} to {kpis['fy_variance_high']:+.1%}). "
+        f"Year-to-date variance is {kpis['ytd_variance_pct']:+.1%} (${kpis['ytd_variance_dollars']/1e6:.2f}M).",
+        f"Gross drug cost PMPM increased {g['pmpm_change_pct']:.1%} year over year (YTD through "
         f"{pd.Timestamp(g['period_end']):%b %Y}): price {g['price_effect']:+.1f}, mix {g['mix_effect_existing'] + g['mix_effect_new_drugs']:+.1f}, "
-        f"utilization {g['utilization_effect']:+.1f} dollars PMPM. Largest drug movers: {mover_txt}.",
-        f"Catastrophic (out-of-pocket cap) penetration reached {cat_now:.1%} of enrolled members by "
-        f"{sep:%b %Y}, versus {cat_prior:.1%} a year earlier. These members drive late-year plan liability.",
+        f"utilization {g['utilization_effect']:+.1f} ($ PMPM). Largest contributors by drug: {mover_txt}.",
+        f"Catastrophic-phase penetration (members who have reached the out-of-pocket cap) was {cat_now:.1%} of enrolled members in "
+        f"{sep:%b %Y}, compared with {cat_prior:.1%} a year earlier. Higher penetration moves a larger share of claims into the catastrophic phase.",
         f"PDE rejections peaked in {peak_month:%b %Y} at {peak_row.loc[peak_month, 'rate']:.1%} of submissions "
-        f"(edit 705 accounted for {int(top705)} of {int(peak_row.loc[peak_month, 'r'])}); unresolved rejections hold "
-        f"${unresolved_dollars/1e3:,.0f}K of gross drug cost that is not in payment reconciliation.",
-        f"The latest month is only {latest_cf:.0%} complete as of the extract date; figures shown are completion-adjusted.",
+        f"(edit 705: {int(top705):,} of {int(peak_row.loc[peak_month, 'r']):,} rejections). Unresolved rejections represent "
+        f"${unresolved_dollars/1e3:,.0f}K of gross drug cost not yet reflected in payment reconciliation.",
+        f"The latest month is {latest_cf:.0%} complete as of the extract date; figures shown are completion-adjusted.",
     ]
     return kpis, insights
 

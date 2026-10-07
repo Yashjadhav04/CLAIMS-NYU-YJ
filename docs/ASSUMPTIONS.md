@@ -14,7 +14,7 @@
 - 2027 benefit design is not modeled.
 
 ## Statistics
-- The backtest has 9 forecasts. Method choice and interval width are tentative.
+- The backtest has 9 forecasts. Method choice and interval width are provisional.
 - The chosen method under-forecast on every origin (bias +2.0%), a sign of accelerating cost growth that seasonal-naive with trailing growth lags. Read the base FY projection as slightly light.
 - Intervals are empirical (80th percentile of backtest absolute error, floor 2%), not model-based.
 
@@ -29,4 +29,4 @@
 - 2025 (quarterly file) and Q1 2026 are not used for growth rates: CMS says the quarterly file is preliminary and not directly comparable.
 - State comparison: cost by prescriber location over enrollees by residence; DC inflated; territories excluded.
 - 2026 negotiated prices come from CMS's fact sheet; the exposure figure applies the announced cut to 2024 spend at constant volume, vs list price and before rebates. It is a ceiling for a gross view, not a forecast.
-- Excel Net_Sensitivity uses an assumed rebate rate (yellow cell); CMS publishes no rebates.
+- The Excel Net_Sensitivity sheet uses an assumed rebate rate (yellow input cell); CMS does not publish rebates.

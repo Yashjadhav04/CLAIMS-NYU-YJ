@@ -1,5 +1,5 @@
 {#-
-  Claims whose derived benefit phase can be trusted.
+  Claims whose derived benefit phase is reliable.
 
   Phase is derived from cumulative claims received so far. It is wrong for a claim if earlier claims for the same member
   and year have not reached the data set: (a) unresolved CMS rejections, or (b) claims not yet received (only possible for

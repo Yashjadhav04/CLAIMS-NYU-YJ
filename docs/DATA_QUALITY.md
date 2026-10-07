@@ -16,4 +16,4 @@
 - **Dose units are not comparable across drugs.** Volume in the trend breakdown is dose units; mix absorbs unit differences, and injectable unit prices are only partly reliable.
 - **DC cost per member is inflated** because costs follow the prescriber's location and members live in neighboring states. Territories are excluded for the same reason.
 - **The 2023 to 2024 price effect (-$29B) is only partly explained** (insulin about $8B). The rest is spread over ~2,700 drugs and not attributed.
-- **Negotiated prices are typed in** from CMS's fact sheet (`src/partd/mfp_2026.csv`), not downloaded. Re-check against the source when it is updated.
+- **Negotiated prices are transcribed** from the CMS fact sheet (`src/partd/mfp_2026.csv`), not downloaded. Re-check against the source when it is updated.

@@ -6,7 +6,7 @@ Sources (all data.cms.gov):
   * Medicare Part D Prescribers by Geography and Drug (2024): state-level drug cost, used to compare states and to reconcile
     against the national spending file.
   * Medicare Quarterly Part D Spending by Drug: Q1 2026 spend per claim, used to check the first Medicare negotiated prices.
-  * src/partd/mfp_2026.csv: the ten negotiated prices for 2026, typed in from CMS's fact sheet (source URL in the file's docs).
+  * src/partd/mfp_2026.csv: the ten negotiated prices for 2026, transcribed from the CMS fact sheet (source URL in the file's docs).
 """
 from __future__ import annotations
 

@@ -10,7 +10,7 @@ face the same problems a real Part D actuarial analyst does:
   discount program)
 * a GLP-1 utilization ramp, annual brand price increases, a specialty tier, and a low-income subsidy (LIS) segment
 * an operational incident: a spike in edit 705 rejections for March 2026 fills
-* a deliberately imperfect synthetic budget (bid) so actual-vs-budget variance has a story
+* a deliberately imperfect synthetic budget (bid) so that actual-versus-budget variance is non-trivial
 
 Run:  PYTHONPATH=src python -m partd.generate
 """

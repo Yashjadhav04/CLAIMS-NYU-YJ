@@ -1,67 +1,70 @@
-# Part D Cost Trend Monitor
+# Medicare Part D Cost Trend Analysis
 
-A production-style analytics project for a Medicare Part D actuarial analytics team: pharmacy claims (PDE) in, trusted PMPM and trend answers out, with a forecast, a dashboard, and tests that make the numbers defensible.
+This repository contains a Medicare Part D cost trend analysis: a pharmacy claims (PDE) pipeline, per-member-per-month (PMPM) and trend measurement, a forecast against budget, dashboards, and automated tests supporting the reported figures.
 
-**Two dashboards, kept separate on purpose.**
-- `reports/partd_dashboard.html`: **synthetic** plan-level claims (PDE, PMPM, IBNR, budget, forecast). Generated here. Nothing comes from UnitedHealth Group or any real plan, and the benefit parameters are illustrative (verify against the CMS Rate Announcement before any real use).
-- `reports/partd_public_cms_dashboard.html`: **real public data** from data.cms.gov: spending by drug 2020 to 2024, monthly enrollment (real member months, so real PMPM), state-level cost, and the 2026 Medicare negotiated prices. All of Part D, gross cost before rebates. Run `make public` to download and build it.
-- `reports/partd_analyst_pack.xlsx`: the same analysis as an Excel workbook with live formulas (`make excel`). `docs/BRIEFING.md`: the one-page memo (`make briefing`).
+**Deliverables.** Two dashboards are maintained separately because they rest on different data.
+- `reports/partd_dashboard.html`: plan-level analysis on **synthetic** claims (PDE, PMPM, IBNR, budget, forecast). No data from any employer or real plan is used, and benefit parameters are illustrative; they should be verified against the CMS Rate Announcement before any production use.
+- `reports/partd_public_cms_dashboard.html`: analysis of **public CMS data** (data.cms.gov): spending by drug 2020 to 2024, monthly enrollment (member months, enabling PMPM), state-level cost, and 2026 Medicare negotiated prices. Figures are national, gross of rebates. Run `make public` to download and build it.
+- `reports/partd_analyst_pack.xlsx`: the public-data analysis as an Excel workbook with live formulas (`make excel`). `docs/BRIEFING.md`: a one-page briefing memo (`make briefing`).
 
 ![synthetic dashboard](docs/dashboard.png)
 ![public CMS dashboard](docs/public_dashboard.png)
 
-## The question it answers
+## Business question
 
-> Are we running above or below budget on net plan liability, why, and where will the year land?
+> Is net plan liability running above or below budget, what is driving the variance, and where is the year expected to finish?
 
-On the bundled synthetic book (6,000 members, 498K claims, Jan 2024 to Sep 2026):
+Results on the bundled synthetic book (6,000 members, 498K claims, January 2024 to September 2026):
 
-- Projected 2026 net plan liability is **$19.7M vs a $18.4M budget (+6.7%, range +5.9% to +7.6%)**.
-- Gross PMPM is up **11.3% year over year**: price +$22.6, mix +$19.4, utilization +$10.4, led by the GLP-1 brands.
-- Catastrophic penetration is **15.6%** of members vs 12.8% a year earlier, which drives late-year liability under the out-of-pocket cap.
-- PDE rejections spiked to **6.7% in March 2026** (edit 705), leaving **$71K** of gross cost unresolved.
+- Projected 2026 net plan liability is **$19.7M against a budget of $18.4M (+6.7%; scenario range +5.9% to +7.6%)**.
+- Gross PMPM is up **11.3% year over year**: price +$22.6, mix +$19.4, utilization +$10.4, with GLP-1 brands the largest contributor.
+- Catastrophic-phase penetration is **15.6%** of members, compared with 12.8% a year earlier.
+- PDE rejections reached **6.7% in March 2026** (edit 705), leaving **$71K** of gross cost unresolved.
 
-## What is in the box
+Results on public CMS data are summarized in `docs/BRIEFING.md`.
 
-| Layer | What | Where |
+## Scope
+
+| Area | Content | Location |
 |---|---|---|
-| Data | Synthetic PDE stream: adjustments, deletions, rejects, resubmissions, late arrivals, 2024 legacy and 2025+ IRA benefit designs | `src/partd/generate.py`, `benefit.py` |
-| Warehouse | DuckDB + dbt: staging, PDE final action, benefit-phase re-derivation, 14 marts, 13 singular tests | `dbt_project/` |
-| Actuarial | Completion factors and IBNR, PMPM, budget variance, price/volume/mix with an exact-sum identity | marts `mart_pmpm_completed`, `mart_trend_drivers` |
-| Forecast | Rolling-origin backtest, method chosen by backtest, empirical interval, FY projection vs budget | `src/partd/forecast.py` |
-| Real public data | CMS spending, enrollment, state and negotiated-price data: national PMPM, use vs price split, state comparison, 2026 negotiation exposure, cross-file checks | `src/partd/public_cms.py`, `public_extra.py` |
-| Analyst deliverables | Excel pack with live formulas, one-page briefing, quarterly runbook, data-quality log, public-data SQL and SAS | `reports/`, `docs/`, `sql/public/`, `sas/05_*` |
-| Reporting | Standalone HTML dashboard, Streamlit app, Power BI kit (DAX, theme, build guide) | `reports/`, `app/`, `powerbi/` |
-| SAS and SQL | SAS reference translations, ad-hoc SQL queries | `sas/`, `sql/` |
-| Quality | 86 dbt checks (mutation-tested) and 40 pytest tests | `dbt_project/tests`, `tests/` |
+| Data | Synthetic PDE stream including adjustments, deletions, rejections, resubmissions and late arrivals; 2024 legacy and 2025+ IRA benefit designs | `src/partd/generate.py`, `benefit.py` |
+| Warehouse | DuckDB and dbt: staging, PDE final action, benefit-phase re-derivation, 14 marts, 13 singular tests | `dbt_project/` |
+| Actuarial | Completion factors and IBNR, PMPM, budget variance, price/volume/mix decomposition | `mart_pmpm_completed`, `mart_trend_drivers` |
+| Forecast | Rolling-origin backtest, method selected on backtest error, empirical interval, full-year projection against budget | `src/partd/forecast.py` |
+| Public data | CMS spending, enrollment, state and negotiated-price analysis; national PMPM; cross-file reconciliation | `src/partd/public_cms.py`, `public_extra.py` |
+| Analyst deliverables | Excel workbook, briefing memo, quarterly runbook, data-quality log, SQL and SAS | `reports/`, `docs/`, `sql/public/`, `sas/` |
+| Reporting | HTML dashboards, Streamlit app, Power BI build kit (DAX, theme, model guide) | `reports/`, `app/`, `powerbi/` |
+| Testing | 86 dbt checks and 40 pytest tests | `dbt_project/tests`, `tests/` |
 
-## Run it
+## Reproduction
 
 ```bash
 pip install -r requirements.txt
-make all                 # generate -> load -> dbt build -> forecast -> report -> export -> test
+make all                 # generate, load, dbt build, forecast, report, export, test
 open reports/partd_dashboard.html
 make app                 # interactive Streamlit version
 ```
 
-`PARTD_MEMBERS=800 make all` builds a small version in under a minute. CI does exactly that.
+`PARTD_MEMBERS=800 make all` produces a reduced build in under a minute and is what CI runs.
 
-## Why you can trust the numbers
+## Quality controls
 
-- **Money identity** on every claim: gross = patient pay + LICS + plan paid + manufacturer discount, to the cent.
-- **Independent re-derivation.** The generator adjudicates claims; dbt re-derives each claim's benefit phase from cumulative cost and checks it (deductible pays nothing, cap respected, catastrophic member pays nothing).
-- **Mutation-tested tests.** I corrupted the data in several ways and confirmed the tests fail.
-- **Exact decomposition.** Utilization + mix + price equals the PMPM change, enforced by a test.
-- **Backtest, not hope.** The forecast method is chosen by rolling-origin error against a naive baseline.
+- **Payment identity** on every claim: gross cost equals patient pay plus LICS plus plan paid plus manufacturer discount, to the cent.
+- **Independent re-derivation** of each claim's benefit phase from cumulative cost, with tests on deductible, out-of-pocket cap and catastrophic cost sharing.
+- **Negative testing:** the data was deliberately corrupted in several ways to confirm the tests detect each case.
+- **Exact decomposition:** utilization, mix and price effects sum to the PMPM change, enforced by a test.
+- **Forecast selection** based on rolling-origin error relative to a naive baseline.
 
-## Honest limitations
+## Limitations
 
-- Synthetic data; illustrative benefit parameters; the budget is synthetic too.
-- Simplified benefit: the deductible applies to all tiers; adjustments are generated only on plan-only claims; the completion factor is gross-based and applied uniformly.
-- The backtest has 9 forecasts, so the model choice and interval are tentative. The chosen method under-forecast every time (bias +2.0%), so the FY projection is more likely light than heavy.
-- Benefit phase re-derivation is valid only when a member's claim history is complete, so tests are scoped accordingly.
+- Plan-level data, benefit parameters and budget are synthetic.
+- The benefit design is simplified: the deductible applies to all tiers, adjustments are generated only on plan-only claims, and the completion factor is gross-based and applied uniformly.
+- The backtest has nine forecasts, so method selection and the interval are provisional. The selected method under-forecast in every period (bias +2.0%), so the full-year projection is more likely understated than overstated.
+- Benefit-phase re-derivation is valid only where a member's claim history is complete; tests are scoped accordingly.
 - 2027 is not modeled.
-- The public CMS data has no rebates, so everything on it is gross cost; net cost to a plan is not knowable from it. Per-member figures use CMS's separate enrollment file as the denominator. 2025 comes from CMS's preliminary quarterly file and is not compared with the annual series; injectable dose-unit prices (insulin, GLP-1s) are only partly reliable.
-- SAS programs are reference translations and were **not run**. A `.pbix` is not included (cannot be built here); `powerbi/model.md` is the build guide and the DAX is untested in Desktop.
+- Public CMS data exclude rebates, so all figures are gross; net cost to a plan cannot be derived from them. Per-member figures use CMS's separate enrollment file as the denominator. 2025 data come from a preliminary quarterly file and are not compared with the annual series. Injectable dose-unit prices (insulin, GLP-1) are only partly reliable.
+- SAS programs are reference translations and have not been executed. No `.pbix` file is included; `powerbi/model.md` documents the build, and the DAX has not been tested in Power BI Desktop.
 
-See `docs/` for architecture, metric definitions, assumptions, and an interview guide.
+## Documentation
+
+`docs/ARCHITECTURE.md`, `METRICS.md`, `ASSUMPTIONS.md`, `DATA_QUALITY.md`, `RUNBOOK.md`, `BRIEFING.md`.

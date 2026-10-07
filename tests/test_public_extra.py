@@ -64,4 +64,4 @@ def test_excel_pack_is_formula_driven(tmp_path, d):
 def test_briefing_builds(d):
     from partd import briefing
     text = briefing.build()
-    assert "## Bottom line" in text and "Caveats" in text
+    assert "## Summary" in text and "Limitations" in text

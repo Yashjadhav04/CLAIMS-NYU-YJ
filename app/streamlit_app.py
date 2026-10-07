@@ -14,8 +14,8 @@ def _load():
 
 d, kpis, insights = _load()
 
-st.title("Part D Cost Trend Monitor")
-st.caption("Synthetic PDE data. Benefit parameters are illustrative. Not UnitedHealth Group data.")
+st.title("Medicare Part D Cost Trend Analysis")
+st.caption("Synthetic plan-level PDE data. Benefit parameters are illustrative. Not UnitedHealth Group data.")
 
 with st.sidebar:
     st.header("Segment view")
@@ -34,7 +34,7 @@ tiles = [
 for col, (a, b, s) in zip(c, tiles):
     col.metric(a, b, s, delta_color="off")
 
-with st.expander("What changed (auto-generated)", expanded=True):
+with st.expander("Key observations (auto-generated)", expanded=True):
     for i in insights:
         st.markdown(f"- {i}")
 
@@ -55,4 +55,4 @@ with t4:
         st.plotly_chart(charts.ALL_FIGS[k](d), width="stretch")
     st.subheader("Forecast backtest")
     st.dataframe(d["backtest"].round(4), hide_index=True)
-    st.caption("Few backtest points: model choice and interval width are tentative.")
+    st.caption("The backtest contains few observations; method selection and interval width are provisional.")

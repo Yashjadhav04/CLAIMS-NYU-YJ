@@ -153,7 +153,7 @@ def build(path: str | None = None) -> str:
     # ------------------------------------------------------------------ Negotiation
     ws = wb.create_sheet("Negotiation")
     _put(ws, "A1", "Medicare negotiated prices for 2026 (first 10 drugs): exposure and early check", TITLE)
-    _put(ws, "A2", f"List and negotiated prices (30-day) typed in from the CMS fact sheet: {X.MFP_SOURCE}", NOTE)
+    _put(ws, "A2", f"List and negotiated prices (30-day) transcribed from the CMS fact sheet: {X.MFP_SOURCE}", NOTE)
     _head(ws, 4, ["Drug", "List price, 30 days ($)", "Negotiated price, 30 days ($)", "Cut", "2024 gross spend ($)", "Share of 2024 Part D spend",
                   "Cut applied to 2024 spend ($)", "Spend per claim 2025 ($)", "Spend per claim Q1 2026 ($)", "Observed change"])
     n = d["negotiation"].sort_values("spend_2024", ascending=False).reset_index(drop=True)

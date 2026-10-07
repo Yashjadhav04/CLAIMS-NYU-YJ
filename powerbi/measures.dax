@@ -2,7 +2,7 @@
 // Tables: fact_pmpm_monthly, fact_budget_variance, fact_trend_drivers, fact_catastrophic_penetration,
 //         fact_pde_edits, dim_date, dim_drug, dim_plan. Relationships in model.md.
 // These measures are written against the export schema but have NOT been run in Power BI Desktop
-// (a .pbix cannot be produced from this environment). Expect to adjust names on first load.
+// (a .pbix cannot be produced from this environment). Field names may require adjustment when first loaded.
 
 // ---- Core --------------------------------------------------------------------------------------
 Member Months = SUM ( fact_pmpm_monthly[member_months] )

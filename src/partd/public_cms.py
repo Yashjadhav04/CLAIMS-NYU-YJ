@@ -170,21 +170,21 @@ def kpis(d: dict) -> tuple[dict, list[str]]:
     lantus = d["overall"][d["overall"]["Brnd_Name"] == "Lantus Solostar"].iloc[0]
     k["insulin_price_effect"] = insulin_pe
     ins = [
-        f"Medicare Part D gross drug spending grew from ${k['spend_2020']/1e9:,.0f}B in 2020 to ${k['spend_2024']/1e9:,.0f}B in 2024, "
-        f"{cagr:.1%} a year, while claims grew {k['claims_cagr']:.1%} a year. Spending per claim rose faster than volume.",
+        f"Medicare Part D gross drug spending increased from ${k['spend_2020']/1e9:,.0f}B in 2020 to ${k['spend_2024']/1e9:,.0f}B in 2024, "
+        f"{cagr:.1%} a year, while claims grew {k['claims_cagr']:.1%} a year. Spend per claim grew faster than claim volume.",
         f"Price effects added ${early/1e9:,.0f}B across 2020 to 2023, then subtracted ${-last['price']/1e9:,.0f}B in 2024. "
         f"Insulin accounts for ${-insulin_pe/1e9:,.0f}B of the drop: Lantus Solostar's spend per dose unit fell from "
         f"${lantus['Avg_Spnd_Per_Dsg_Unt_Wghtd_2023']:.2f} to ${lantus['Avg_Spnd_Per_Dsg_Unt_Wghtd_2024']:.2f}, in line with the insulin list-price cuts announced for 2024. "
-        f"The rest is spread across the other drugs ({n_down:,} drugs had lower spend per unit, {n_up:,} higher); I have not attributed it further.",
-        f"Volume (${last['volume']/1e9:,.0f}B) and a shift toward higher-cost drugs (${last['mix']/1e9:,.0f}B) drove the 2024 increase instead.",
-        f"Per member, gross cost went from ${k['pmpm_2020']:,.0f} to ${k['pmpm_2024']:,.0f} a month between 2020 and 2024 "
+        f"The remainder is distributed across other drugs ({n_down:,} with lower spend per unit, {n_up:,} higher) and has not been attributed.",
+        f"The 2024 increase was driven by volume (${last['volume']/1e9:,.0f}B) and a shift toward higher-cost drugs (${last['mix']/1e9:,.0f}B).",
+        f"Per member, gross cost increased from ${k['pmpm_2020']:,.0f} to ${k['pmpm_2024']:,.0f} a month between 2020 and 2024 "
         f"({nat.loc[2024, 'avg_enrollees']/1e6:,.1f}M average Part D enrollees in 2024, {nat.loc[2024, 'mapd_share']:.0%} in MA-PD plans). It was flat from 2023 to 2024.",
         f"The ten drugs Medicare negotiated for 2026 were ${k['neg_spend']/1e9:,.0f}B, or {k['neg_share']:.0%}, of 2024 gross spend. "
-        f"Their spend per claim in Q1 2026 data is already {-neg['observed_change_per_claim'].max():.0%} to {-neg['observed_change_per_claim'].min():.0%} lower than 2025 for most of them, "
-        "close to the announced price cuts (NovoLog is the exception because its list price was cut in 2024). Q1 2026 is preliminary.",
-        f"GLP-1 diabetes and weight-loss drugs went from ${k['glp1_2020']/1e9:,.1f}B to ${k['glp1_2024']/1e9:,.1f}B ({k['glp1_2024']/k['spend_2024']:.1%} of 2024 spending).",
+        f"Their spend per claim in Q1 2026 data is {-neg['observed_change_per_claim'].max():.0%} to {-neg['observed_change_per_claim'].min():.0%} lower than in 2025 for nine of the ten, "
+        "broadly consistent with the announced price reductions (NovoLog is the exception; its list price was reduced in 2024). Q1 2026 data are preliminary.",
+        f"Spend on GLP-1 drugs (diabetes and weight loss) increased from ${k['glp1_2020']/1e9:,.1f}B to ${k['glp1_2024']/1e9:,.1f}B ({k['glp1_2024']/k['spend_2024']:.1%} of 2024 spending).",
         f"The ten largest drugs make up {top10:.0%} of 2024 spending; {k['top_drug']} alone is ${k['top_drug_spend']/1e9:,.1f}B.",
-        "The 2025 figure comes from CMS's preliminary quarterly file, which CMS says is not directly comparable to the annual file, so it is shown as a single number and left out of growth rates.",
+        "The 2025 figure is from CMS's preliminary quarterly file, which CMS states is not directly comparable with the annual file. It is shown as a single value and excluded from growth rates.",
     ]
     return k, ins
 
@@ -403,21 +403,21 @@ FIGS = {
 
 ABOUT = """
 <div class="method">
-<div class="warn"><b>Real public data.</b> CMS Medicare Part D Spending by Drug, from data.cms.gov: the annual file for 2020 to 2024 and the preliminary quarterly file for 2025. This is aggregate drug-level data for all of Medicare Part D, not any one plan and not claim-level.</div>
+<div class="warn"><b>Source.</b> CMS Medicare Part D Spending by Drug (data.cms.gov): annual file for 2020 to 2024 and preliminary quarterly file for 2025. The data are aggregate, drug-level and cover all of Medicare Part D. They are not plan-specific or claim-level.</div>
 <h3>What the numbers are</h3>
 <ul>
-<li><b>Gross drug cost</b>: Medicare, plan and beneficiary payments for the claim. CMS does not publish rebates or other price concessions, so this is not net cost to a plan.</li>
-<li><b>Per-member figures</b> divide the spending file by member months from CMS Monthly Enrollment (Part D enrollees summed over the 12 months). Spending and enrollment are separate CMS releases; they reconcile in the checks tab.</li>
-<li><b>State view</b> uses the prescriber-by-geography file (cost by where the prescriber practices) over enrollees by state of residence. They differ a little, so treat state gaps as indicative.</li>
-<li><b>Negotiated prices</b> are typed in from CMS's fact sheet (link below). Observed change is spend per claim in the preliminary Q1 2026 file against the 2025 file, so it is a check on direction and size, not a measurement of savings.</li>
-<li><b>Trend breakdown</b> uses the same price/volume/mix algebra as the synthetic pipeline, with dose units as volume. Dose units mix tablets, millilitres and pens, so "mix" also absorbs unit differences; read it as a shift between drugs.</li>
+<li><b>Gross drug cost</b>: total Medicare, plan and beneficiary payments. CMS does not publish rebates or other price concessions, so figures are gross and do not represent net cost to a plan.</li>
+<li><b>Per-member figures</b> divide the spending file by member months from CMS Monthly Enrollment (Part D enrollees summed over the 12 months). Spending and enrollment are separate CMS releases; reconciliation is shown on the data-checks tab.</li>
+<li><b>State view</b> uses the prescriber-by-geography file (cost by where the prescriber practices) over enrollees by state of residence. The two bases differ, so state-level gaps should be read as indicative.</li>
+<li><b>Negotiated prices</b> are transcribed from the CMS fact sheet (link below). Observed change is spend per claim in the preliminary Q1 2026 file versus the 2025 file; it indicates direction and magnitude and is not a measurement of savings.</li>
+<li><b>Trend breakdown</b> uses the same price/volume/mix algebra as the synthetic pipeline, with dose units as volume. Dose units mix tablets, millilitres and pens, so the mix component also absorbs unit differences and is best read as a shift between drugs.</li>
 <li>Drug rows are CMS's "Overall" rows (all manufacturers). The manufacturer view uses the per-manufacturer rows.</li>
 </ul>
-<h3>Cautions</h3>
+<h3>Limitations</h3>
 <ul>
-<li>2025 is from the quarterly file. CMS says it is preliminary, can change with claims lag, and should not be compared directly with the annual file. It is shown as a single number and left out of growth rates. Q1 2026 is not used.</li>
-<li>Drugs are matched by brand and generic name; a drug that CMS renamed between years appears as an exit and an entry.</li>
-<li>The 2024 and 2025 files are separate releases; their gap is not treated as a finding.</li>
+<li>2025 is from the quarterly file. CMS describes it as preliminary, subject to revision for claims lag, and not directly comparable with the annual file. It is reported as a single figure and excluded from growth rates. Q1 2026 is used only for the negotiated-drug check.</li>
+<li>Drugs are matched by brand and generic name; a drug renamed by CMS between years appears as an exit and an entry.</li>
+<li>The 2024 and 2025 figures come from separate releases, and the difference between them is not interpreted.</li>
 </ul>
 <p>Negotiated prices: <a href="https://cms.gov/files/document/fact-sheet-negotiated-prices-initial-price-applicability-year-2026.pdf">CMS fact sheet</a>. Also: <a href="https://data.cms.gov/summary-statistics-on-use-and-payments/medicare-medicaid-enrollment/medicare-monthly-enrollment">Medicare Monthly Enrollment</a>, <a href="https://data.cms.gov/provider-summary-by-type-of-service/medicare-part-d-prescribers/medicare-part-d-prescribers-by-geography-and-drug">Part D Prescribers by Geography and Drug</a>.</p>
 <p>Source: <a href="https://data.cms.gov/summary-statistics-on-use-and-payments/medicare-medicaid-spending-by-drug/medicare-part-d-spending-by-drug">Medicare Part D Spending by Drug</a>, <a href="https://data.cms.gov/summary-statistics-on-use-and-payments/medicare-medicaid-spending-by-drug/medicare-quarterly-part-d-spending-by-drug">Medicare Quarterly Part D Spending by Drug</a>.</p>
@@ -436,13 +436,13 @@ def _table(fig: go.Figure) -> str:
     return "<details><summary>View data</summary>" + pd.concat(frames).head(80).to_html(index=False, border=0, float_format=lambda v: f"{v:,.3f}") + "</details>"
 
 
-GEO_NOTE = ("<div class='warn' style='margin:0 0 12px'>Read with care: cost is attributed to where the <b>prescriber</b> practices, enrollment to where the member lives. "
-            "Washington DC at about $840 is almost certainly inflated by prescribers there treating members who live in Maryland and Virginia. "
-            "Territories are excluded for the same reason. Differences between states mix use, price, drug mix, plan type and income-subsidy share; this view does not separate them.</div>")
+GEO_NOTE = ("<div class='warn' style='margin:0 0 12px'><b>Note.</b> Cost is attributed to the location of the <b>prescriber</b>; enrollment is by member residence. "
+            "The Washington DC figure (about $840) is likely overstated because prescribers there treat members who reside in Maryland and Virginia. "
+            "Territories are excluded for the same reason. State differences reflect a combination of utilization, price, drug mix, plan type and low-income subsidy share; this view does not separate these factors.</div>")
 
-NEG_NOTE = ("<div class='warn' style='margin:0 0 12px'>The announced cut compares the negotiated price (MFP) with the list price CMS published. The data shows spend per claim, which also moves with strength and pack mix, "
-            "and Q1 2026 is preliminary. NovoLog's list price was cut about 75% in 2024, so little of the announced 76% is left to show between 2025 and 2026. "
-            "Entresto and Januvia differ from the announced cut in ways I have not explained. This checks direction and size; it is not a savings measurement.</div>")
+NEG_NOTE = ("<div class='warn' style='margin:0 0 12px'><b>Note.</b> The announced reduction compares the negotiated price (MFP) with the list price published by CMS. The observed measure is spend per claim, which also reflects strength and package mix, "
+            "and Q1 2026 data are preliminary. NovoLog's list price was reduced by about 75% in 2024, so little of the announced 76% reduction remains to be observed between 2025 and 2026. "
+            "The differences for Entresto and Januvia have not been explained. This comparison indicates direction and approximate size; it is not a measurement of savings.</div>")
 
 
 def neg_table_html(d: dict) -> str:
@@ -453,12 +453,12 @@ def neg_table_html(d: dict) -> str:
         for r in n.itertuples())
     tot = n["spend_2024"].sum(); red = n["implied_gross_reduction_2024_volume"].sum()
     mm = d["natl"].set_index("year").loc[2024, "member_months"]
-    return ("<div class='card' style='padding:16px'><h3 style='margin-top:0'>Exposure arithmetic (illustrative)</h3>"
+    return ("<div class='card' style='padding:16px'><h3 style='margin-top:0'>Exposure estimate (illustrative)</h3>"
             "<table style='display:table'><tr><th style='text-align:left'>Drug</th><th>List, 30 days</th><th>Negotiated, 30 days</th><th>Cut</th><th>2024 gross spend</th><th>Cut applied to 2024 spend</th><th>Spend per claim, Q1 2026 vs 2025</th></tr>"
             + rows + f"<tr><td style='text-align:left'><b>Total</b></td><td></td><td></td><td></td><td><b>${tot/1e9:,.1f}B</b></td><td><b>${red/1e9:,.1f}B</b></td><td></td></tr></table>"
             f"<p style='color:#52514e'>At constant 2024 volume and ignoring rebates, the cuts would take about ${red/1e9:,.0f}B ({red/tot:.0%} of these drugs' spend, "
             f"{red/d['totals'].set_index('year').loc[2024,'spend']:.0%} of all 2024 gross Part D spend), or about ${red/mm:,.0f} per member per month. "
-            "It is a ceiling for a gross view: plans and manufacturers already paid rebates on these drugs, so the net effect for a plan is smaller. Not a forecast.</p></div>")
+            "This is an upper bound on a gross basis. Rebates already apply to these drugs, so the net effect for a plan would be smaller. It is not a forecast.</p></div>")
 
 
 def quality_html(d: dict) -> str:
@@ -468,7 +468,7 @@ def quality_html(d: dict) -> str:
     return ("<div class='card' style='padding:16px'><h3 style='margin-top:0'>Cross-file checks (run on every build)</h3>"
             "<table style='display:table'><tr><th style='text-align:left'>Check</th><th>A</th><th>B</th><th>Difference</th><th>Result</th></tr>" + rows + "</table>"
             "<p style='color:#52514e'>Enrollment, spending and prescriber files come from different CMS releases. A difference under the tolerance means they describe the same program; "
-            "a larger one would be investigated before any number is published. Territories are left out of the state comparison because prescriber location and beneficiary residence differ too much there.</p></div>")
+            "a larger one would be investigated before figures are published. Territories are excluded from the state comparison because prescriber location and beneficiary residence differ too much there.</p></div>")
 
 
 def build() -> str:
@@ -506,9 +506,9 @@ def build() -> str:
     ins_html = "<ul>" + "".join(f"<li>{html.escape(i)}</li>" for i in ins) + "</ul>"
     return (
         "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-        f"<title>Medicare Part D Spending Trends</title><style>{CSS}</style><script>{get_plotlyjs()}</script></head><body>"
-        "<header><h1>Medicare Part D Spending Trends, 2020 to 2024</h1>"
-        "<p>Real CMS public data: gross drug spending by drug across all of Part D. Not UnitedHealth Group data and not net of rebates.</p></header>"
+        f"<title>Medicare Part D Drug Spending Analysis, 2020 to 2024</title><style>{CSS}</style><script>{get_plotlyjs()}</script></head><body>"
+        "<header><h1>Medicare Part D Drug Spending Analysis, 2020 to 2024</h1>"
+        "<p>Source: CMS public data (data.cms.gov). Gross drug cost for all of Medicare Part D, before rebates. Not plan-specific data.</p></header>"
         f"<main><div class='tiles'>{tile_html}</div><div class='insights'>{ins_html}</div><nav>{nav}</nav>{''.join(panels)}</main>"
         f"<script>{JS}</script></body></html>"
     )
